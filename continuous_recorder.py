@@ -4,6 +4,7 @@ import time
 import datetime
 import threading
 from pathlib import Path
+from cat_detector import CatDetector
 
 def ensure_dir(directory):
     """Create directory if it doesn't exist"""
