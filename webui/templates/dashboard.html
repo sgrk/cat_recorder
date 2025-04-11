@@ -32,6 +32,28 @@
                     <li>Recordings: {{ (status.storage_usage.recordings / 1024 / 1024)|round(2) }} MB</li>
                     <li>Cat Videos: {{ (status.storage_usage.cat_videos / 1024 / 1024)|round(2) }} MB</li>
                 </ul>
+                {% if status.last_cat_detection %}
+                <p>Last Cat Detection: {{ status.last_cat_detection|int|strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                {% else %}
+                <p>Last Cat Detection: None</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Latest Cat Detection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Latest Cat Detection</h2>
+            </div>
+            <div class="card-body">
+                <div id="cat-image-container" class="text-center">
+                    {% if status.last_cat_detection %}
+                    <img id="latest-cat-image" src="/api/latest_cat_image" class="img-fluid" alt="Latest cat detection" style="max-height: 300px;">
+                    <p class="mt-2">Detected at: {{ status.last_cat_detection|int|strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                    {% else %}
+                    <p>No cat detections yet.</p>
+                    {% endif %}
+                </div>
             </div>
         </div>
 
@@ -197,6 +219,18 @@
                 alert('Error uploading model');
             }
         });
+        
+        // Auto-refresh cat image every 10 seconds
+        function refreshCatImage() {
+            const img = document.getElementById('latest-cat-image');
+            if (img) {
+                // Add timestamp to prevent caching
+                img.src = '/api/latest_cat_image?' + new Date().getTime();
+            }
+        }
+        
+        // Set up periodic refresh for cat image
+        setInterval(refreshCatImage, 10000);
     </script>
 </body>
 </html>
