@@ -2,6 +2,7 @@ from pathlib import Path
 from abc import ABC, abstractmethod
 from typing import List
 from config.config_manager import ConfigManager
+import numpy as np
 
 class StorageStrategy(ABC):
     @abstractmethod
