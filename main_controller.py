@@ -6,12 +6,13 @@ from camera.recorder import CameraRecorder
 from processor.video_processor import VideoProcessor
 from storage.manager import StorageManager
 from config.config_manager import ConfigManager
-from webui.app import start_webui
+from webui.app import start_webui, camera_recorder
 
 class MainController:
     def __init__(self):
         self.config = ConfigManager()
-        self.camera_recorder = CameraRecorder()
+        # Use the shared camera_recorder instance from app.py
+        self.camera_recorder = camera_recorder
         self.video_processor = VideoProcessor()
         self.storage_manager = StorageManager()
 
