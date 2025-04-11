@@ -5,3 +5,6 @@ config/__pycache__
 processor/__pycache__
 storage/__pycache__
 webui/__pycache__
+recordings/*
+recoded_viseos/*
+cat_videos/*
