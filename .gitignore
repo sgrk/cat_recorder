@@ -1,2 +1,7 @@
 .venv
 recorded_videos/*
+camera/__pycache__
+config/__pycache__
+processor/__pycache__
+storage/__pycache__
+webui/__pycache__
