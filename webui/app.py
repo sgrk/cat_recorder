@@ -1,24 +1,36 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, abort
 from pathlib import Path
 from typing import Dict, Any
 import threading
 import time
+import os
 
 from config.config_manager import ConfigManager
 from storage.manager import StorageManager
 from camera.recorder import CameraRecorder
+from processor.video_processor import VideoProcessor
 
 app = Flask(__name__)
 config = ConfigManager()
 storage_manager = StorageManager()
 
-# Create a shared camera recorder instance
+# Add custom template filters
+@app.template_filter('strftime')
+def _jinja2_filter_datetime(timestamp, fmt=None):
+    from datetime import datetime
+    if fmt is None:
+        fmt = '%Y-%m-%d %H:%M:%S'
+    return datetime.fromtimestamp(timestamp).strftime(fmt)
+
+# Create shared instances
 camera_recorder = CameraRecorder()
+video_processor = VideoProcessor()
 
 # Global variables to store system status
 system_status: Dict[str, Any] = {
     "recording": False,
     "last_processed": None,
+    "last_cat_detection": None,
     "storage_usage": {
         "recordings": 0,
         "cat_videos": 0
@@ -41,6 +53,11 @@ def update_system_status():
             system_status["recording"] = camera_recorder.recording_thread.is_alive()
         else:
             system_status["recording"] = False
+            
+        # Update last cat detection time
+        latest_cat_image = video_processor.get_latest_cat_image()
+        if latest_cat_image and latest_cat_image.exists():
+            system_status["last_cat_detection"] = latest_cat_image.stat().st_mtime
             
         time.sleep(5)  # Update every 5 seconds
 
@@ -117,6 +134,24 @@ def stream_video(folder, filename):
         return send_file(str(video_path.absolute()), mimetype='video/mp4')
     except Exception as e:
         return jsonify({"error": str(e)}), 404
+
+@app.route("/api/latest_cat_image")
+def get_latest_cat_image():
+    """Get the latest cat detection image."""
+    try:
+        latest_image = video_processor.get_latest_cat_image()
+        if not latest_image or not latest_image.exists():
+            return jsonify({"error": "No cat detection image available"}), 404
+            
+        # Return the image file
+        return send_file(str(latest_image.absolute()), mimetype='image/jpeg')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+@app.route("/api/status")
+def get_status():
+    """Get current system status."""
+    return jsonify(system_status)
 
 def start_webui():
     """Start the web UI server."""

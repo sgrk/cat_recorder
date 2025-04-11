@@ -12,6 +12,7 @@ storage:
   recordings_dir: "recordings"
   cat_videos_dir: "cat_videos"
   models_dir: "models"
+  cat_images_dir: "cat_images"  # Directory to store cat detection images
   max_storage_size: 1073741824  # 1GB in bytes
 
 # Video processing settings
