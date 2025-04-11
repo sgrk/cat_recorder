@@ -107,7 +107,7 @@
                     <div class="card-body">
                         <div class="list-group">
                             {% for recording in recordings %}
-                            <a href="/api/video/{{ recording.path }}" class="list-group-item list-group-item-action">
+                            <a href="/api/video/recordings/{{ recording.name }}" class="list-group-item list-group-item-action">
                                 {{ recording.name }}
                                 <small class="text-muted d-block">
                                     Size: {{ (recording.size / 1024 / 1024)|round(2) }} MB
@@ -128,7 +128,7 @@
                     <div class="card-body">
                         <div class="list-group">
                             {% for video in cat_videos %}
-                            <a href="/api/video/{{ video.path }}" class="list-group-item list-group-item-action">
+                            <a href="/api/video/cat_videos/{{ video.name }}" class="list-group-item list-group-item-action">
                                 {{ video.name }}
                                 <small class="text-muted d-block">
                                     Size: {{ (video.size / 1024 / 1024)|round(2) }} MB

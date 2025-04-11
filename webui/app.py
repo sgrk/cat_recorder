@@ -6,10 +6,14 @@ import time
 
 from config.config_manager import ConfigManager
 from storage.manager import StorageManager
+from camera.recorder import CameraRecorder
 
 app = Flask(__name__)
 config = ConfigManager()
 storage_manager = StorageManager()
+
+# Create a shared camera recorder instance
+camera_recorder = CameraRecorder()
 
 # Global variables to store system status
 system_status: Dict[str, Any] = {
@@ -21,19 +25,27 @@ system_status: Dict[str, Any] = {
     }
 }
 
-def update_storage_usage():
-    """Update storage usage information periodically."""
+def update_system_status():
+    """Update system status information periodically."""
     while True:
+        # Update storage usage
         system_status["storage_usage"]["recordings"] = storage_manager.get_total_size(
             Path(config.storage_config["recordings_dir"])
         )
         system_status["storage_usage"]["cat_videos"] = storage_manager.get_total_size(
             Path(config.storage_config["cat_videos_dir"])
         )
-        time.sleep(60)  # Update every minute
+        
+        # Check if recording is active by checking if the recording thread is alive
+        if hasattr(camera_recorder, 'recording_thread') and camera_recorder.recording_thread:
+            system_status["recording"] = camera_recorder.recording_thread.is_alive()
+        else:
+            system_status["recording"] = False
+            
+        time.sleep(5)  # Update every 5 seconds
 
-# Start storage usage update thread
-threading.Thread(target=update_storage_usage, daemon=True).start()
+# Start system status update thread
+threading.Thread(target=update_system_status, daemon=True).start()
 
 @app.route("/")
 def dashboard():
@@ -82,11 +94,27 @@ def upload_model():
     finally:
         temp_path.unlink(missing_ok=True)
 
-@app.route("/api/video/<path:video_path>")
-def stream_video(video_path):
+@app.route("/api/video/<folder>/<filename>")
+def stream_video(folder, filename):
     """Stream a video file."""
     try:
-        return send_file(video_path)
+        # Map folder name to actual directory
+        if folder == "recordings":
+            video_dir = config.storage_config["recordings_dir"]
+        elif folder == "cat_videos":
+            video_dir = config.storage_config["cat_videos_dir"]
+        else:
+            return jsonify({"error": "Invalid video folder"}), 400
+        
+        # Create the full path
+        video_path = Path(video_dir) / filename
+        
+        # Ensure the path exists and is a file
+        if not video_path.exists() or not video_path.is_file():
+            return jsonify({"error": "Video file not found"}), 404
+        
+        # Use send_file with the absolute path and set mimetype
+        return send_file(str(video_path.absolute()), mimetype='video/mp4')
     except Exception as e:
         return jsonify({"error": str(e)}), 404
 
