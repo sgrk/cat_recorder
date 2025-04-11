@@ -51,7 +51,7 @@ class VideoProcessor:
         results = []
         
         for frame in frames:
-            frame_results = self.model(frame, conf=self.confidence_threshold)[0]
+            frame_results = self.model(frame,classes=[int(self.cat_class_id)], conf=self.confidence_threshold)[0]
             
             # Extract class IDs and confidence scores
             detections = []
