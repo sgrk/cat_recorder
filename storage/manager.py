@@ -39,11 +39,13 @@ class StorageManager:
         self.recordings_dir = Path(self.config.storage_config["recordings_dir"])
         self.cat_videos_dir = Path(self.config.storage_config["cat_videos_dir"])
         self.models_dir = Path(self.config.storage_config["models_dir"])
+        self.cat_images_dir = Path(self.config.storage_config["cat_images_dir"])
         
         # Create directories if they don't exist
         self.recordings_dir.mkdir(exist_ok=True)
         self.cat_videos_dir.mkdir(exist_ok=True)
         self.models_dir.mkdir(exist_ok=True)
+        self.cat_images_dir.mkdir(exist_ok=True)
 
     def get_total_size(self, directory: Path) -> int:
         """Get total size of MP4 files in directory."""
@@ -97,3 +99,45 @@ class StorageManager:
             dst.write(src.read())
         
         return dest_path
+        
+    def save_cat_image(self, image: np.ndarray, timestamp: float) -> Path:
+        """Save cat detection image to cat_images directory."""
+        import cv2
+        import time
+        from datetime import datetime
+        
+        # Create filename with timestamp
+        filename = f"cat_detected_{int(timestamp)}.jpg"
+        image_path = self.cat_images_dir / filename
+        
+        # Save image
+        cv2.imwrite(str(image_path), image)
+        
+        # Clean up old images if we have more than 20
+        self._cleanup_cat_images(20)
+        
+        return image_path
+        
+    def _cleanup_cat_images(self, max_count: int) -> None:
+        """Keep only the most recent max_count cat images."""
+        images = list(self.cat_images_dir.glob("*.jpg"))
+        if len(images) <= max_count:
+            return
+            
+        # Sort by modification time (newest first)
+        images.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        # Delete oldest images
+        for image in images[max_count:]:
+            image.unlink()
+            
+    def get_latest_cat_image(self) -> Path:
+        """Get the path to the most recent cat detection image."""
+        images = list(self.cat_images_dir.glob("*.jpg"))
+        if not images:
+            return None
+            
+        # Sort by modification time (newest first)
+        images.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        
+        return images[0]
