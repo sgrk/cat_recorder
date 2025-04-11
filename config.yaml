@@ -22,7 +22,7 @@ processing:
 
 # Model settings
 model:
-  path: "models/yolov8n.pt"
+  path: "models/detect_kinako_best.pt"
   cat_class_id: 0
 
 # Web UI settings
