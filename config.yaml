@@ -1,0 +1,31 @@
+# Camera settings
+camera:
+  device_id: 0  # External camera device ID
+  fps: 30
+  resolution:
+    width: 1280
+    height: 720
+  recording_duration: 60  # Duration of each video in seconds
+
+# Storage settings
+storage:
+  recordings_dir: "recordings"
+  cat_videos_dir: "cat_videos"
+  models_dir: "models"
+  max_storage_size: 1073741824  # 1GB in bytes
+
+# Video processing settings
+processing:
+  frame_interval: 30  # Extract every 30th frame
+  cat_detection_threshold: 0.5  # 50% of frames must contain cats
+  confidence_threshold: 0.5  # YOLO confidence threshold
+
+# Model settings
+model:
+  path: "models/yolov8n.pt"
+  cat_class_id: 0
+
+# Web UI settings
+webui:
+  host: "0.0.0.0"
+  port: 50548
