@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, send_file, abort
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import threading
 import time
 import os
@@ -9,10 +9,12 @@ from config.config_manager import ConfigManager
 from storage.manager import StorageManager
 from camera.recorder import CameraRecorder
 from processor.video_processor import VideoProcessor
+from restart_manager import RestartManager
 
 app = Flask(__name__)
 config = ConfigManager()
 storage_manager = StorageManager()
+restart_manager = RestartManager()
 
 # Add custom template filters
 @app.template_filter('strftime')
@@ -34,7 +36,8 @@ system_status: Dict[str, Any] = {
     "storage_usage": {
         "recordings": 0,
         "cat_videos": 0
-    }
+    },
+    "restart_in_progress": False
 }
 
 def update_system_status():
@@ -59,10 +62,33 @@ def update_system_status():
         if latest_cat_image and latest_cat_image.exists():
             system_status["last_cat_detection"] = latest_cat_image.stat().st_mtime
             
+        # Check if restart is in progress
+        if hasattr(restart_manager, '_restart_thread') and restart_manager._restart_thread:
+            system_status["restart_in_progress"] = restart_manager._restart_thread.is_alive()
+        else:
+            system_status["restart_in_progress"] = False
+            
         time.sleep(5)  # Update every 5 seconds
 
 # Start system status update thread
 threading.Thread(target=update_system_status, daemon=True).start()
+
+# Map config sections to modules that need to be restarted when they change
+CONFIG_MODULE_MAP = {
+    "camera": ["camera"],
+    "storage": ["storage"],
+    "processing": ["processor"],
+    "model": ["processor"]
+}
+
+def determine_modules_to_restart(changed_sections: List[str]) -> List[str]:
+    """Determine which modules need to be restarted based on changed config sections."""
+    modules_to_restart = set()
+    for section in changed_sections:
+        if section in CONFIG_MODULE_MAP:
+            for module in CONFIG_MODULE_MAP[section]:
+                modules_to_restart.add(module)
+    return list(modules_to_restart)
 
 @app.route("/")
 def dashboard():
@@ -82,11 +108,26 @@ def handle_settings():
         return jsonify(config._config)
     
     new_settings = request.json
-    for section, values in new_settings.items():
-        for key, value in values.items():
-            config.set_setting(value, section, key)
+    changed_sections = []
     
-    return jsonify({"status": "success"})
+    for section, values in new_settings.items():
+        if values:  # Check if the section has any values
+            changed_sections.append(section)
+            for key, value in values.items():
+                config.set_setting(value, section, key)
+    
+    # Determine which modules need to be restarted
+    modules_to_restart = determine_modules_to_restart(changed_sections)
+    
+    # Restart affected modules
+    if modules_to_restart:
+        restart_manager.restart_modules(modules_to_restart)
+        return jsonify({
+            "status": "success", 
+            "message": f"Settings updated. Restarting modules: {', '.join(modules_to_restart)}"
+        })
+    
+    return jsonify({"status": "success", "message": "Settings updated."})
 
 @app.route("/api/model", methods=["POST"])
 def upload_model():
@@ -105,7 +146,15 @@ def upload_model():
     try:
         new_model_path = storage_manager.save_model(temp_path)
         config.set_setting(str(new_model_path), "model", "path")
-        return jsonify({"status": "success", "path": str(new_model_path)})
+        
+        # Restart the processor module to load the new model
+        restart_manager.restart_modules(["processor"])
+        
+        return jsonify({
+            "status": "success", 
+            "path": str(new_model_path),
+            "message": "Model uploaded and processor restarted."
+        })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -152,6 +201,37 @@ def get_latest_cat_image():
 def get_status():
     """Get current system status."""
     return jsonify(system_status)
+
+@app.route("/api/restart", methods=["POST"])
+def restart_modules():
+    """Restart specified modules."""
+    if system_status.get("restart_in_progress", False):
+        return jsonify({"error": "A restart is already in progress"}), 409
+        
+    data = request.json or {}
+    modules = data.get("modules", [])
+    
+    # If no modules specified, restart all
+    if not modules:
+        modules = ["camera", "processor", "storage"]
+        
+    # Validate module names
+    valid_modules = ["camera", "processor", "storage"]
+    invalid_modules = [m for m in modules if m not in valid_modules]
+    
+    if invalid_modules:
+        return jsonify({
+            "error": f"Invalid module names: {', '.join(invalid_modules)}",
+            "valid_modules": valid_modules
+        }), 400
+        
+    # Restart the specified modules
+    restart_manager.restart_modules(modules)
+    
+    return jsonify({
+        "status": "success",
+        "message": f"Restarting modules: {', '.join(modules)}"
+    })
 
 def start_webui():
     """Start the web UI server."""

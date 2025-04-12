@@ -6,6 +6,7 @@ from camera.recorder import CameraRecorder
 from processor.video_processor import VideoProcessor
 from storage.manager import StorageManager
 from config.config_manager import ConfigManager
+from restart_manager import RestartManager
 from webui.app import start_webui, camera_recorder
 
 class MainController:
@@ -15,9 +16,41 @@ class MainController:
         self.camera_recorder = camera_recorder
         self.video_processor = VideoProcessor()
         self.storage_manager = StorageManager()
+        self.restart_manager = RestartManager()
 
         self.processing_thread = None
         self.stop_processing = threading.Event()
+        
+        # Register modules for restart
+        self.register_restart_handlers()
+
+    def register_restart_handlers(self):
+        """Register all modules that can be restarted."""
+        self.restart_manager.register_module("camera", self.restart_camera)
+        self.restart_manager.register_module("processor", self.restart_processor)
+        self.restart_manager.register_module("storage", self.restart_storage)
+        
+    def restart_camera(self):
+        """Restart the camera recorder module."""
+        print("Restarting camera recorder...")
+        self.camera_recorder.stop_recording()
+        # Reload config
+        self.camera_recorder = CameraRecorder()
+        self.camera_recorder.start_recording()
+        print("Camera recorder restarted")
+        
+    def restart_processor(self):
+        """Restart the video processor module."""
+        print("Restarting video processor...")
+        # Create a new processor instance with updated config
+        self.video_processor = VideoProcessor()
+        print("Video processor restarted")
+        
+    def restart_storage(self):
+        """Restart the storage manager module."""
+        print("Restarting storage manager...")
+        self.storage_manager = StorageManager()
+        print("Storage manager restarted")
 
     def _process_videos_loop(self):
         """Continuously process new videos."""
@@ -70,9 +103,14 @@ class MainController:
 
 if __name__ == "__main__":
     # Create necessary directories
-    for dir_name in ["recordings", "cat_videos", "models"]:
+    for dir_name in ["recordings", "cat_videos", "models", "cat_images"]:
         Path(dir_name).mkdir(exist_ok=True)
 
     # Start the system
     controller = MainController()
+    
+    # Make the controller instance accessible to the restart manager
+    # This allows the WebUI to access the controller for module restarts
+    RestartManager()._controller = controller
+    
     controller.run()

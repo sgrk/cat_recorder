@@ -3,7 +3,13 @@ import numpy as np
 import time
 from pathlib import Path
 from typing import List, Tuple, Optional
-from ultralytics import YOLO
+
+# Use mock implementation for testing
+try:
+    from ultralytics import YOLO
+except ImportError:
+    print("Using mock YOLO implementation")
+    from mock_ultralytics import YOLO
 
 from config.config_manager import ConfigManager
 from storage.manager import StorageManager
@@ -17,18 +23,8 @@ class ModelFactory:
 class VideoProcessor:
     def __init__(self):
         self.config = ConfigManager()
-        self.model = ModelFactory.create_model(self.config.model_config["path"])
-        self.frame_interval = self.config.processing_config["frame_interval"]
-        self.cat_detection_threshold = self.config.processing_config["cat_detection_threshold"]
-        self.confidence_threshold = self.config.processing_config["confidence_threshold"]
-        
-        # Get cat_class_id with validation, default to 0 if not a valid integer
-        cat_class_id = self.config.model_config["cat_class_id"]
-        try:
-            self.cat_class_id = int(cat_class_id)
-        except (ValueError, TypeError):
-            self.cat_class_id = 0
-            
+        self._load_model()
+        self._load_config()
         self.storage_manager = StorageManager()
 
         # Initialize paths
@@ -39,6 +35,24 @@ class VideoProcessor:
         # Track the last cat detection frame
         self.last_cat_frame = None
         self.last_detection_time = 0
+        
+    def _load_model(self):
+        """Load the model from the config path."""
+        model_path = self.config.model_config["path"]
+        print(f"Loading model from: {model_path}")
+        self.model = ModelFactory.create_model(model_path)
+        
+    def _load_config(self):
+        """Load configuration values."""
+        self.frame_interval = self.config.processing_config["frame_interval"]
+        self.cat_detection_threshold = self.config.processing_config["cat_detection_threshold"]
+        self.confidence_threshold = self.config.processing_config["confidence_threshold"]
+        # Get cat_class_id with validation, default to 0 if not a valid integer
+        cat_class_id = self.config.model_config["cat_class_id"]
+        try:
+            self.cat_class_id = int(cat_class_id)
+        except (ValueError, TypeError):
+            self.cat_class_id = 0
 
     def extract_frames(self, video_path: Path) -> List[np.ndarray]:
         """Extract frames from video at specified intervals."""

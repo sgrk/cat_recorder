@@ -29,4 +29,4 @@ model:
 # Web UI settings
 webui:
   host: "0.0.0.0"
-  port: 50548
+  port: 54044
