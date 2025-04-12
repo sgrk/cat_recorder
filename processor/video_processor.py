@@ -21,7 +21,14 @@ class VideoProcessor:
         self.frame_interval = self.config.processing_config["frame_interval"]
         self.cat_detection_threshold = self.config.processing_config["cat_detection_threshold"]
         self.confidence_threshold = self.config.processing_config["confidence_threshold"]
-        self.cat_class_id = self.config.model_config["cat_class_id"]
+        
+        # Get cat_class_id with validation, default to 0 if not a valid integer
+        cat_class_id = self.config.model_config["cat_class_id"]
+        try:
+            self.cat_class_id = int(cat_class_id)
+        except (ValueError, TypeError):
+            self.cat_class_id = 0
+            
         self.storage_manager = StorageManager()
 
         # Initialize paths
@@ -58,7 +65,7 @@ class VideoProcessor:
         results = []
         
         for frame in frames:
-            frame_results = self.model(frame, classes=[int(self.cat_class_id)], conf=self.confidence_threshold)[0]
+            frame_results = self.model(frame, classes=[self.cat_class_id], conf=self.confidence_threshold)[0]
             
             # Extract class IDs and confidence scores
             detections = []
