@@ -10,3 +10,4 @@ recoded_viseos/*
 cat_videos/*
 cat_images/*
 __pycache__
+config.yaml
