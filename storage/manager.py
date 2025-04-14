@@ -48,6 +48,15 @@ class StorageManager:
         self.models_dir.mkdir(exist_ok=True)
         self.cat_images_dir.mkdir(exist_ok=True)
 
+    def clear_directory(self, directory: Path) -> None:
+        """Delete all files in the specified directory."""
+        if not directory.exists():
+            return
+        
+        for file_path in directory.glob("*"):
+            if file_path.is_file():
+                file_path.unlink()
+    
     def get_total_size(self, directory: Path) -> int:
         """Get total size of MP4 files in directory."""
         if not directory.exists():
