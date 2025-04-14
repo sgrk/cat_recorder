@@ -18,6 +18,10 @@ class MainController:
         self.storage_manager = StorageManager()
         self.restart_manager = RestartManager()
 
+        # Clear all files in the recordings folder at startup
+        self.storage_manager.clear_directory(self.storage_manager.recordings_dir)
+        print("Cleared all files in recordings folder")
+
         self.processing_thread = None
         self.stop_processing = threading.Event()
         

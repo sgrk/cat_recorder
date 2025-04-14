@@ -48,6 +48,15 @@ class StorageManager:
         self.models_dir.mkdir(exist_ok=True)
         self.cat_images_dir.mkdir(exist_ok=True)
 
+    def clear_directory(self, directory: Path) -> None:
+        """Delete all files in the specified directory."""
+        if not directory.exists():
+            return
+        
+        for file_path in directory.glob("*"):
+            if file_path.is_file():
+                file_path.unlink()
+    
     def get_total_size(self, directory: Path) -> int:
         """Get total size of MP4 files in directory."""
         if not directory.exists():
@@ -65,7 +74,7 @@ class StorageManager:
         self.strategy.cleanup(self.cat_videos_dir, max_size)
 
     def list_recordings(self) -> List[dict]:
-        """List all recordings with their metadata."""
+        """List all recordings with their metadata, sorted by creation time (newest first)."""
         recordings = []
         for file_path in self.recordings_dir.glob("*.mp4"):
             stat = file_path.stat()
@@ -75,10 +84,12 @@ class StorageManager:
                 "created": stat.st_mtime,
                 "path": str(file_path)
             })
+        # Sort by creation time, newest first
+        recordings.sort(key=lambda x: x["created"], reverse=True)
         return recordings
 
     def list_cat_videos(self) -> List[dict]:
-        """List all cat videos with their metadata."""
+        """List all cat videos with their metadata, sorted by creation time (newest first)."""
         cat_videos = []
         for file_path in self.cat_videos_dir.glob("*.mp4"):
             stat = file_path.stat()
@@ -88,6 +99,8 @@ class StorageManager:
                 "created": stat.st_mtime,
                 "path": str(file_path)
             })
+        # Sort by creation time, newest first
+        cat_videos.sort(key=lambda x: x["created"], reverse=True)
         return cat_videos
 
     def save_model(self, model_file: Path) -> Path:
