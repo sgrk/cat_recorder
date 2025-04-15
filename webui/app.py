@@ -162,7 +162,7 @@ def upload_model():
 
 @app.route("/api/video/<folder>/<filename>")
 def stream_video(folder, filename):
-    """Stream a video file."""
+    """Stream or download a video file."""
     try:
         # Map folder name to actual directory
         if folder == "recordings":
@@ -179,8 +179,23 @@ def stream_video(folder, filename):
         if not video_path.exists() or not video_path.is_file():
             return jsonify({"error": "Video file not found"}), 404
         
-        # Use send_file with the absolute path and set mimetype
-        return send_file(str(video_path.absolute()), mimetype='video/mp4')
+        # Check if this is a download request
+        download = request.args.get('download', 'false').lower() == 'true'
+        
+        # Use send_file with appropriate headers
+        if download:
+            return send_file(
+                str(video_path.absolute()),
+                mimetype='video/mp4',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            response = send_file(str(video_path.absolute()), mimetype='video/mp4')
+            # Add headers to improve mobile playback
+            response.headers['Accept-Ranges'] = 'bytes'
+            return response
+            
     except Exception as e:
         return jsonify({"error": str(e)}), 404
 
