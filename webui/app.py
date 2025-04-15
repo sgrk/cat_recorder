@@ -202,6 +202,37 @@ def get_status():
     """Get current system status."""
     return jsonify(system_status)
 
+@app.route("/api/detection_stats")
+def get_detection_stats():
+    """Get hourly detection statistics for the past 24 hours."""
+    from datetime import datetime, timedelta
+    import time
+
+    # Get current time and 24 hours ago
+    now = datetime.now()
+    past_24h = now - timedelta(hours=24)
+
+    # Get all cat videos from the past 24 hours
+    videos = storage_manager.list_cat_videos()
+    recent_videos = [v for v in videos if datetime.fromtimestamp(v["created"]) > past_24h]
+
+    # Initialize hourly buckets for the past 24 hours
+    hours = []
+    counts = []
+    for i in range(24):
+        hour_start = now - timedelta(hours=24-i)
+        hours.append(hour_start.strftime("%H:00"))
+        # Count videos in this hour
+        hour_count = sum(1 for v in recent_videos if 
+            datetime.fromtimestamp(v["created"]) >= hour_start and
+            datetime.fromtimestamp(v["created"]) < (hour_start + timedelta(hours=1)))
+        counts.append(hour_count)
+
+    return jsonify({
+        "labels": hours,
+        "data": counts
+    })
+
 @app.route("/api/restart", methods=["POST"])
 def restart_modules():
     """Restart specified modules."""
