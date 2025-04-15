@@ -162,7 +162,7 @@ def upload_model():
 
 @app.route("/api/video/<folder>/<filename>")
 def stream_video(folder, filename):
-    """Stream a video file."""
+    """Stream or download a video file."""
     try:
         # Map folder name to actual directory
         if folder == "recordings":
@@ -179,8 +179,23 @@ def stream_video(folder, filename):
         if not video_path.exists() or not video_path.is_file():
             return jsonify({"error": "Video file not found"}), 404
         
-        # Use send_file with the absolute path and set mimetype
-        return send_file(str(video_path.absolute()), mimetype='video/mp4')
+        # Check if this is a download request
+        download = request.args.get('download', 'false').lower() == 'true'
+        
+        # Use send_file with appropriate headers
+        if download:
+            return send_file(
+                str(video_path.absolute()),
+                mimetype='video/mp4',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            response = send_file(str(video_path.absolute()), mimetype='video/mp4')
+            # Add headers to improve mobile playback
+            response.headers['Accept-Ranges'] = 'bytes'
+            return response
+            
     except Exception as e:
         return jsonify({"error": str(e)}), 404
 
@@ -201,6 +216,37 @@ def get_latest_cat_image():
 def get_status():
     """Get current system status."""
     return jsonify(system_status)
+
+@app.route("/api/detection_stats")
+def get_detection_stats():
+    """Get hourly detection statistics for the past 24 hours."""
+    from datetime import datetime, timedelta
+    import time
+
+    # Get current time and 24 hours ago
+    now = datetime.now()
+    past_24h = now - timedelta(hours=24)
+
+    # Get all cat videos from the past 24 hours
+    videos = storage_manager.list_cat_videos()
+    recent_videos = [v for v in videos if datetime.fromtimestamp(v["created"]) > past_24h]
+
+    # Initialize hourly buckets for the past 24 hours
+    hours = []
+    counts = []
+    for i in range(24):
+        hour_start = now - timedelta(hours=24-i)
+        hours.append(hour_start.strftime("%H:00"))
+        # Count videos in this hour
+        hour_count = sum(1 for v in recent_videos if 
+            datetime.fromtimestamp(v["created"]) >= hour_start and
+            datetime.fromtimestamp(v["created"]) < (hour_start + timedelta(hours=1)))
+        counts.append(hour_count)
+
+    return jsonify({
+        "labels": hours,
+        "data": counts
+    })
 
 @app.route("/api/restart", methods=["POST"])
 def restart_modules():
