@@ -154,20 +154,12 @@
                         <div class="list-group">
                             {% for recording in recordings %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
                                     <div>
                                         <h6 class="mb-1">{{ recording.name }}</h6>
                                         <small class="text-muted">
                                             Size: {{ (recording.size / 1024 / 1024)|round(2) }} MB
                                         </small>
-                                    </div>
-                                    <div class="btn-group">
-                                        <a href="/api/video/recordings/{{ recording.name }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                                            <i class="bi bi-play-fill"></i> Play
-                                        </a>
-                                        <a href="/api/video/recordings/{{ recording.name }}?download=true" class="btn btn-sm btn-outline-secondary" download="{{ recording.name }}">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -187,20 +179,22 @@
                         <div class="list-group">
                             {% for video in cat_videos %}
                             <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex flex-column">
                                     <div>
                                         <h6 class="mb-1">{{ video.name }}</h6>
                                         <small class="text-muted">
                                             Size: {{ (video.size / 1024 / 1024)|round(2) }} MB
                                         </small>
                                     </div>
-                                    <div class="btn-group">
-                                        <a href="/api/video/cat_videos/{{ video.name }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                                            <i class="bi bi-play-fill"></i> Play
-                                        </a>
-                                        <a href="/api/video/cat_videos/{{ video.name }}?download=true" class="btn btn-sm btn-outline-secondary" download="{{ video.name }}">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <div class="mt-2">
+                                        <div class="btn-group w-100">
+                                            <a href="/api/video/cat_videos/{{ video.name }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                <i class="bi bi-play-fill"></i> Play
+                                            </a>
+                                            <a href="/api/video/cat_videos/{{ video.name }}?download=true" class="btn btn-sm btn-outline-secondary" download="{{ video.name }}">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
